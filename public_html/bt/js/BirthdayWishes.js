@@ -698,6 +698,20 @@ window.goals = null;
                             //  FID = response.id;
                             var FID = response.id;
                             var BDAY = response.birthday;
+
+//                            ================================================
+
+                            var now = new Date();
+
+                            var startDate = new Date(Date.parse(BDAY));
+
+                            var currentYear = (startDate.getMonth()+2) + "/" + startDate.getDate() + "/" + now.getFullYear();
+                            
+                            console.log('--------------------------- ',currentYear);
+                            
+                            var currentBday = Date.parse(currentYear);
+//                            =================================================
+
                             var FNAME = response.name;
 
                             var currentUser = Parse.User.current();
@@ -733,8 +747,6 @@ window.goals = null;
                                     return;
                                 }
 
-
-
                                 Parse.User.logIn(FID, pin, {
                                     success: function(user) {
                                         // Do stuff after successful login.
@@ -746,7 +758,7 @@ window.goals = null;
                                         $(".about").css({display: "none"});
 
 
-                                        loadWishes();
+                                        loadWishes(FID, currentBday);
 
 
                                     },
@@ -775,7 +787,7 @@ window.goals = null;
 
 
 
-                                                loadWishes();
+                                                loadWishes(FID, currentBday);
 
 
 
@@ -805,7 +817,7 @@ window.goals = null;
                                 $(".about").css({display: "none"});
 
 
-                                loadWishes();
+                                loadWishes(FID, currentBday);
 
                             }
 
@@ -826,7 +838,7 @@ window.goals = null;
 
             //=========================================
 
-            //  loadWishes();
+            //  loadWishes(currentBday);
 
 
 
@@ -846,20 +858,42 @@ window.goals = null;
 
 
 
-    function loadWishes() {
+    function loadWishes(id, start, end) {
 
-        console.log("Facebook is connected ...");
+        start = start / 1000;
+
+        console.log("Facebook is connected 1400719773...", start);
         /* make the API call */
         FB.api(
-                "/me/feed",
+                "/me/feed?until=" + start + "&limit=50",
                 function(response) {
                     if (response && !response.error) {
                         /* handle the result */
                         console.log(response);
                         TL = new Wish_list();
                         $.each(response.data, function(i, obj) {
-                            if (obj.message) {
-                                console.log(obj.from.name + "[" + obj.from.id + "]" + "-->", obj.message);
+                            
+                            
+                            
+                            if (obj.message && obj.to) {
+                                
+                                console.log(obj.from.name + "[" + obj.from.id + "]" + "-->", obj.to);
+                                
+                                var data = obj.to.data;
+                                
+                                //we pass if this is addressed to one person and that person is the logged in User
+                                if(data.length !== 1)
+                                    return;
+                                
+                                if(data[0].id !== id)
+                                    return;
+                                
+                                
+                                
+                                
+                                
+                                
+                                
 
                                 var talk = new Wish({title: obj.from.name, body: obj.message, image: im1});
                                 talk.updateID();

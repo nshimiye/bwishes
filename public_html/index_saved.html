@@ -118,6 +118,37 @@
 
                         <li style="background-color: #3b5998; position: relative;"> 
                             <a href="#" class="FBLoggin" title="login with your facebook account">Facebook</a>
+                            <div class="pinSecond" style="position: absolute;
+                                 top: 50px;
+                                 left: -80px;
+                                 width: 250px;
+                                 background-color: white;
+                                 box-shadow: 0 0 5px 0 black;
+                                 border-radius: 3px;
+                                 display: none;
+                                 ">
+
+                                <!---------------------------------------------------->
+
+                                <div style="margin: 1em; text-align: center;">
+                                    <span class="pinError" style="color: red"></span>
+                                    <form role="form" class="pinForm">
+                                        <div class="form-group">
+                                            <input class="form-control pin" type="password" name="pin" placeholder="type or choose a pin">
+                                        </div>
+                                        <div class="form-group" style="display: none;">
+                                            <input class="form-control pin_verify" type="password" name="pin_verify" placeholder="verify">
+                                        </div>
+                                        <div class="form-group">
+
+                                            <button type="button" class="btn btn-primary logginBtn">Continue</button>
+                                            <button type="button" class="btn btn-default closePin" data-dismiss="modal">Cancel</button>
+                                        </div>
+                                    </form>
+
+
+                                    <!--------------------------------------------------->
+                                </div>
                         </li>
                     </ul>
 
@@ -545,6 +576,28 @@
             var pos = (H / 2) - (h / 2);
 
             $(img).css({top: pos + "px"});
+            });
+
+
+
+
+            $(".closePin").click(function(e){
+            e.preventDefault();
+
+            console.log("========================================ddss", $(".pinSecond").css("display"));
+
+            if ($(".pinSecond").css("display") === "none" )
+            return false;
+
+
+
+            $(".pinError").html("");
+
+            $(".pin").val("");
+
+            $(".pinSecond").animate({
+            height: "toggle"
+            });
             });
 
 

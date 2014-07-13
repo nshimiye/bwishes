@@ -88,12 +88,7 @@ window.goals = null;
     if (!window.goals)
         window.goals = new Goals();
 
-    $(".search_type").click(function(e) {
-        e.preventDefault();
-        var type = $(e.target).html();
-        console.log("type :: ", type);
-        $(".for_toggle").text(type);
-    });
+
 
 
 
@@ -393,6 +388,12 @@ window.goals = null;
 
             this.stalk = this.$(".talkBody");
 
+            var img = this.model.getImage();
+
+            var imgHolder = this.$el.children(".circleImg");
+
+            $(imgHolder).html('<img src="' + img.get("imageURL") + '" alt="Logo" style="width: 100px; height: 100px; z-index: -1;" >');
+
             return this;
         },
         decideRender: function(talk) { //this updates a particular wish view
@@ -404,6 +405,8 @@ window.goals = null;
             var imgHolder = this.$el.children(".circleImg");
 
             $(imgHolder).html('<img src="' + img.get("imageURL") + '" alt="Logo" style="width: 100px; height: 100px; z-index: -1;" >');
+
+            return this;
         },
         showWish: function(e) {
 //            console.log(this.stalk);
@@ -419,7 +422,8 @@ window.goals = null;
         imageTemplate: _.template($('#image_view_template').html()),
         events: {
             "keypress #searchArea": "createOnEnter",
-            "click .searchRes": "addToview"
+            "click .searchRes": "addToview",
+            "click .asearch": "bestSearch"
         },
         initialize: function(options) {
 
@@ -470,7 +474,7 @@ window.goals = null;
                 return false;
 
             TL.each(function(talk) { //double checking of talks of same image -- waste
-                console.log("talk:", talk);
+
                 var view = new WishView({model: talk});
                 var item = view.render().el;
 
@@ -524,14 +528,47 @@ window.goals = null;
         render: function() {
             $(".addedImage").remove();
             $(".addedWishs").remove();
-            //var img = this.imageTemplate(this.image.toJSON()); //add img to background
-            //this.$el.prepend(img);
+
+
             var self = this;
-            $.each(TL.searchByImg(this.image.get("imageID")), function(i, item) { //double checking of talks of same image -- waste
+//            $.each(TL.searchByImg(this.image.get("imageID")), function(i, item) { //double checking of talks of same image -- waste
+            $.each(TL, function(i, item) {
                 self.addOne(item);
             });
 
             this.positionImg();
+        },
+        bestSearch: function(e) {
+
+
+            if (e.keyCode === 13) {
+                // search and return a matched element
+                // clean input
+                $(e.target).val("");
+                return;
+            }
+
+            //Names corresponds to title
+            //Wishes corresponds to body
+
+            $(".addedImage").remove();
+            $(".addedWishs").remove();
+            var self = this;
+
+            // search and hilight all shown elements
+            var kw = $(e.target).val();
+
+
+            if (kw.trim() !== "") {
+                console.log($(e.target).val());
+
+
+
+            }
+
+
+
+
         }
     });
 
@@ -618,14 +655,20 @@ window.goals = null;
 //===duplicate here
 
 
-//search functionality added -- simple one
+    var TYPE = "body";
     /**
      * 
      * @param [] wviews {name: ---, body: ---}
      * @returns {undefined}
      */
     function searchWishes(keyword, wviews) {
-        var found = new Array();
+
+
+        //call my search engine and see if we can be the greatest
+        var found = sortStrings(wviews, keyword, TYPE);
+
+
+
         wviews.each(function(i, item) {
 
             var name = $(item).children().get(1);
@@ -650,38 +693,161 @@ window.goals = null;
     }
 
     $(".asearch").keyup(function(e) {
-        if (e.keyCode === 13)
-        {
+        if (e.keyCode === 13) {
             // search and return a matched element
-
             // clean input
             $(e.target).val("");
             return;
         }
-
         // search and hilight all shown elements
         var kw = $(e.target).val();
         $(".aWish").css({opacity: 0.1, cursor: "default"});
         if (kw.trim() !== "") {
 
-            searchWishes(kw.trim(), $(".aWish"));
+            var sortedArray = sortStrings(TL.models, kw.trim(), TYPE);
+            TL.models = sortedArray;
+            console.log("------------------", sortedArray[0].getImage());
+            ttcn.resetAll();
 
+            updateListeners();
         }
 
         console.log($(e.target).val());
 
+    });
 
-
+    $(".search_type").click(function(e) {
+        e.preventDefault();
+        var type = $(e.target).html();
+        console.log("type :: ", type);
+        $(".for_toggle").text(type);
+        TYPE = (type.trim() === 'Names') ? 'title' : 'body';
     });
 
 
-    function statusChangeCallback(response, pin) {
+
+
+    function updateListeners() {
+        $(".aWish").css({cursor: "pointer"});
+        $(".aWish").click(function(e) {
+
+
+
+            $(".about").css({display: "none"});
+
+            //getting the element
+            var cls = $(e.target).attr("class");
+            var thistalk = $(e.target);
+            if (cls.search("aWish") < 0)
+                thistalk = $(e.target).parents(".aWish");
+
+            console.log("focused", FOCUSED);
+            console.log("thistalk", thistalk);
+            if (FOCUSED)
+                console.log("compare", (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")));
+
+            if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
+                return false;
+
+
+            //reset the focused element
+            if (FOCUSED) {
+                $(FOCUSED).css({"z-index": 0});
+                $(FOCUSED).animate({
+                    top: POS.top + "px",
+                    left: POS.left + "px",
+                    "background-color": POS.bc
+                }, 1000);
+            }
+
+
+
+
+            //save my current position 
+            FOCUSED = thistalk;
+
+
+            POS = $(thistalk).position();
+            POS.bc = $(thistalk).css("background-color");
+            // put me in the center 
+
+            var H = $(window).outerHeight();
+            var W = $(window).outerWidth();
+            var h = $(thistalk).outerHeight();
+            var w = $(thistalk).outerWidth();
+
+            var os = {top: $("body").scrollTop(), left: 0};
+
+
+
+            var newPos = {x: (W / 2) - (w / 2) + os.left, y: (H / 2) - (h / 2) + os.top};
+
+
+            $(".aWish").css({
+                opacity: 0.1
+            });
+
+
+            $(FOCUSED).css({"z-index": 105, opacity: 1});
+            $(FOCUSED).animate({
+                top: newPos.y + "px",
+                left: newPos.x + "px",
+                "background-color": "rgb(255, 255, 255)"
+
+            }, 1000);
+
+            // set the focussed variable to me
+
+            return true;
+        });
+
+
+        SAVE = null;
+        $(".aWish").mouseover(function() {
+            SAVE = $(this).css("opacity");
+
+            if (!FOCUSED)
+                return false;
+
+            if (FOCUSED && (FOCUSED.attr("talk_id")
+                    !== $(this).attr("talk_id")))
+                $(this).css({
+                    opacity: 0.5
+                });
+        });
+        $(".aWish").mouseout(function() {
+
+            if (!FOCUSED)
+                return false;
+
+            if (FOCUSED && (FOCUSED.attr("talk_id")
+                    !== $(this).attr("talk_id")))
+                $(this).css({
+                    opacity: SAVE
+                });
+        });
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    function statusChangeCallback(user) {
         console.log('statusChangeCallback');
-        console.log(response);
+        console.log(user);
         console.log("display", $(".pinSecond").attr("display"));
         loader(true); //start progess bar
 
-        if (response.status === 'connected') {
+        if (user) {
             // Logged into your app and Facebook.
 
             //=========================== parse login signedUp
@@ -705,112 +871,51 @@ window.goals = null;
 
                             var startDate = new Date(Date.parse(BDAY));
 
-                            var currentYear = (startDate.getMonth()+2) + "/" + startDate.getDate() + "/" + now.getFullYear();
-                            
-                            console.log('--------------------------- ',currentYear);
-                            
+                            var currentYear = (startDate.getMonth() + 2) + "/" + startDate.getDate() + "/" + now.getFullYear();
+
+
+
+                            console.log('--------------------------- ', currentYear);
+
                             var currentBday = Date.parse(currentYear);
+                            //if the computed date is in the future, we go back a year
+                            if (now < currentBday) {
+                                currentYear = (startDate.getMonth() + 2) + "/" + startDate.getDate() + "/" + (now.getFullYear() - 1);
+                                currentBday = Date.parse(currentYear);
+                            }
 //                            =================================================
 
                             var FNAME = response.name;
 
-                            var currentUser = Parse.User.current();
-                            if (currentUser) {
 
-                                // compare ids here - if not the same logout
-                                if (currentUser.get("username") !== FID) {
 
-                                    if (!pin) {
-                                        //we have a new user with no pin, so just logout
-                                        logout();
-                                        loader(false); //stop progess bar
-                                        return;
-                                    }
+                            if (!user.get("active")) {
+                                user.set({
+                                    "FID": FID,
+                                    "name": FNAME,
+                                    birthday: BDAY //we should not collect this later
+                                });
 
-                                    Parse.User.logOut();
-                                }
-                            }
+                                user.save(null, {
+                                    success: function() {
 
-                            if (!Parse.User.current()) { //if user has been logged out 
-
-                                //we try to log them in -- user has to provide a pin
-
-                                //prompt for token and signin/signup the user
-                                // $(".forenterPin").trigger("click");
-
-                                // we have to sign user in here
-
-                                if (!pin) {
-                                    //we have a new user with no pin, so just logout
-                                    logout();
-                                    loader(false); //stop progess bar
-                                    return;
-                                }
-
-                                Parse.User.logIn(FID, pin, {
-                                    success: function(user) {
-                                        // Do stuff after successful login.
-
+                                        // Hooray! Let them use the app now.
+                                        console.log("cool u you are in now!");
                                         //$(".closePin").trigger("click");
                                         $(".FBLoggin").html("Logout");
 
                                         $(".closePin").trigger("click");
                                         $(".about").css({display: "none"});
-
-
                                         loadWishes(FID, currentBday);
 
-
-                                    },
-                                    error: function(user, error) {
-                                        // The login failed. Check error to see why.
-
-                                        //check to see if the user is returning and then log them in
-                                        //otherwise, we create a parse user for them and log them in
-
-                                        var user = new Parse.User();
-                                        user.set({"username": FID,
-                                            "password": pin,
-                                            "name": FNAME,
-                                            birthday: BDAY //we should not collect this later
-                                        });
-
-                                        user.signUp(null, {
-                                            success: function(user) {
-                                                // Hooray! Let them use the app now.
-                                                console.log("cool u you are in now!");
-                                                //$(".closePin").trigger("click");
-                                                $(".FBLoggin").html("Logout");
-
-                                                $(".closePin").trigger("click");
-                                                $(".about").css({display: "none"});
-
-
-
-                                                loadWishes(FID, currentBday);
-
-
-
-                                            },
-                                            error: function(user, error) {
-                                                // Show the error message somewhere and let the user try again.
-                                                $(".pinError").html("Oops, something went wrong, check your input");
-                                                console.log("Error: " + error.code + " " + error.message);
-                                                loader(false); //stop progess bar
-                                            }
-                                        });
                                     }
                                 });
 
 
+                            } else {//users is a returning one
 
 
-
-
-//                                ------------------------
-
-
-                            } else {
+                                //$(".closePin").trigger("click");
                                 $(".FBLoggin").html("Logout");
 
                                 $(".closePin").trigger("click");
@@ -827,25 +932,6 @@ window.goals = null;
                             loader(false); //end progess bar
                         }
                     });
-
-//            var currentUser = Parse.User.current();
-//            if (currentUser) {
-//                // do stuff with the user
-//            } else {
-//                // show the signup or login page
-//            }
-
-
-            //=========================================
-
-            //  loadWishes(currentBday);
-
-
-
-        } else if (response.status === 'not_authorized') {
-            // The person is logged into Facebook, but not your app.
-            console.log('Please log ' + 'into this app.');
-            loader(false); //stop progess bar
 
         } else {
 
@@ -872,28 +958,21 @@ window.goals = null;
                         console.log(response);
                         TL = new Wish_list();
                         $.each(response.data, function(i, obj) {
-                            
-                            
-                            
+
+
+
                             if (obj.message && obj.to) {
-                                
+
                                 console.log(obj.from.name + "[" + obj.from.id + "]" + "-->", obj.to);
-                                
+
                                 var data = obj.to.data;
-                                
+
                                 //we pass if this is addressed to one person and that person is the logged in User
-                                if(data.length !== 1)
+                                if (data.length !== 1)
                                     return;
-                                
-                                if(data[0].id !== id)
+
+                                if (data[0].id !== id)
                                     return;
-                                
-                                
-                                
-                                
-                                
-                                
-                                
 
                                 var talk = new Wish({title: obj.from.name, body: obj.message, image: im1});
                                 talk.updateID();
@@ -1010,18 +1089,6 @@ window.goals = null;
 //                        ======================================================
                         //attach jQuery actionlisteners
                         $(".loginArea").draggable();
-                        //$(".aWish").draggable();  //only if you enable this
-                        //$( ".about" ).draggable();
-
-//                        $(".aWish").hover(function() {
-//                            $(".aWish").css({
-//                                opacity: 0.1
-//                            });
-//
-//                            $(this).css({
-//                                opacity: 1
-//                            });
-//                        });
                         SAVE = null;
                         $(".aWish").mouseover(function() {
                             SAVE = $(this).css("opacity");
@@ -1055,56 +1122,52 @@ window.goals = null;
         );
     }
 
+
+
+
+
+
+
+
+
+
+
     $(".FBLoggin").click(function() {
 
         if (Parse.User.current()) {//logging out
             logout();
             return;
         }
-
-
-        $(".pinSecond").animate({
-            height: "toggle"
-        });
-
-
-    });
-
-//trigger fb loggin flow
-    $(".logginBtn").click(function(e) {
-        e.preventDefault();
-
-        var pin = $(".pin").val();
-        if (pin.trim() === "") {
-            $(".pinError").html("pin required");
-            return false;
-        }
-
-
         //logging in
-        FB.login(function(response) {
-            statusChangeCallback(response, pin.trim());
-        }, {scope: 'user_friends, public_profile,user_birthday,read_stream'});
+        Parse.FacebookUtils.login('user_friends, public_profile,user_birthday,read_stream',
+                {
+                    success: function(user) {
+                        statusChangeCallback(user);
+                    }
+                });
+
+//        $(".pinSecond").animate({
+//            height: "toggle"
+//        });
+
+//fix this guy
 
     });
 
     function logout() {
         //logout of facebook
-        FB.logout(function(response) {
-            // user is now logged out
-            TL = null;
-            console.log("logout", response);
+        // user is now logged out
+        TL = null;
+//        console.log("logout", response);
 
-            //logout of parse
-            Parse.User.logOut();
-            $(".FBLoggin").html("Facebook");
-            $(".about").css({display: "block"});
+        //logout of parse
+        Parse.User.logOut();
+        $(".FBLoggin").html("Facebook");
+        $(".about").css({display: "block"});
 
-            loader(false); //end progess bar
+        loader(false); //end progess bar
 
-            ttcn.resetAll();
-
-        });
+        ttcn.resetAll();
 
 
     }
@@ -1115,17 +1178,27 @@ window.goals = null;
     $.ajaxSetup({cache: true});
 
     $.getScript('//connect.facebook.net/en_UK/all.js', function() {
-        FB.init({
+        Parse.FacebookUtils.init({
             appId: '1442596856005738',
             cookie: true, // enable cookies to allow the server to access 
             // the session
             xfbml: true, // parse social plugins on this page
-            version: 'v2.0' // use version 2.0
+            version: 'v1.0' // use version 2.0
         });
-        FB.getLoginStatus(function(response) {
 
-            statusChangeCallback(response, null);
-        });
+        if (Parse.User.current()) {
+            statusChangeCallback(Parse.User.current());
+
+        } else {
+            Parse.FacebookUtils.logIn('user_friends, public_profile,user_birthday,read_stream',
+                    {
+                        success: function(user) {
+                            statusChangeCallback(user);
+                        }
+                    });
+
+        }
+
 
     });
 
@@ -1170,23 +1243,7 @@ window.goals = null;
 
 
 
-
-
-
-
 })(jQuery, Backbone, Parse);
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ===============================================================================================================
 //                                                Sorting strings here
@@ -1341,8 +1398,8 @@ function getSubstring(main, keyword) { //runtime = length of main - keyword
 
     for (var i = 0; i < main.length - keyword.length + 1; i++) {
         var usage = main.substring(i, i + keyword.length);
-
-        if (usage === keyword) { //we should use ignorecases????
+        var tmp = keyword;
+        if (usage.toLowerCase() === tmp.toLowerCase()) { //we should use ignorecases????
             count += 1;
         }
     }
@@ -1367,7 +1424,7 @@ function createHash(strings, w, type) { //runtime = O(nk) where n is array size,
     var list = null; //the stac that hold indexes of string with same frequency
 
     for (var i = 0; i < strings.length; i++) { //O(n)
-        frequency = getSubstring(strings[i][type], w); //O(k)
+        frequency = getSubstring(strings[i].get(type), w); //O(k)
 
         if (indexList.hasOwnProperty(frequency.toString())) {// we have list-entry on this key so we access its head
             list = indexList[frequency.toString()];

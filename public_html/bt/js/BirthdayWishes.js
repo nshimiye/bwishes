@@ -537,38 +537,6 @@ window.goals = null;
             });
 
             this.positionImg();
-        },
-        bestSearch: function(e) {
-
-
-            if (e.keyCode === 13) {
-                // search and return a matched element
-                // clean input
-                $(e.target).val("");
-                return;
-            }
-
-            //Names corresponds to title
-            //Wishes corresponds to body
-
-            $(".addedImage").remove();
-            $(".addedWishs").remove();
-            var self = this;
-
-            // search and hilight all shown elements
-            var kw = $(e.target).val();
-
-
-            if (kw.trim() !== "") {
-                console.log($(e.target).val());
-
-
-
-            }
-
-
-
-
         }
     });
 
@@ -600,8 +568,7 @@ window.goals = null;
 
         if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
             return false;
-
-
+        
         //reset the focused element
         if (FOCUSED) {
             $(FOCUSED).css({"z-index": 0});
@@ -611,10 +578,6 @@ window.goals = null;
                 "background-color": POS.bc
             }, 1000);
         }
-
-
-
-
         //save my current position 
         FOCUSED = thistalk;
 
@@ -656,41 +619,6 @@ window.goals = null;
 
 
     var TYPE = "body";
-    /**
-     * 
-     * @param [] wviews {name: ---, body: ---}
-     * @returns {undefined}
-     */
-    function searchWishes(keyword, wviews) {
-
-
-        //call my search engine and see if we can be the greatest
-        var found = sortStrings(wviews, keyword, TYPE);
-
-
-
-        wviews.each(function(i, item) {
-
-            var name = $(item).children().get(1);
-            name = $(name).text();
-            var wish = $(item).children().get(2);
-            wish = $(wish).text();
-
-            console.log("ch 1", name);
-            console.log("ch 2", wish);
-
-            if (name.search(keyword) >= 0) {
-                $(item).css({opacity: 0.99, cursor: "pointer"});
-                found.push(item);
-            } else if (wish.search(keyword) >= 0) {
-                $(item).css({opacity: 0.99, cursor: "pointer"});
-                found.push(item);
-            }
-
-        });
-
-        return found;
-    }
 
     $(".asearch").keyup(function(e) {
         if (e.keyCode === 13) {

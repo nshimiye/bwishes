@@ -231,13 +231,13 @@ window.goals = null;
 
 
 
-    var Image = Parse.Object.extend("Image",{
+    var Image = Parse.Object.extend("Image", {
         defaults: function() {
 
             return {
                 name: "His/Her name",
                 imageID: 0,
-                imageURL: "//myimage",
+                imageURL: "bt/img/bwishesy.png",
                 userID: 0,
                 uploadTime: new Date()
             };
@@ -250,26 +250,21 @@ window.goals = null;
         }
     });
 
-    var Wish = Parse.Object.extend("Wish",{
+    var Wish = Backbone.Model.extend({
         defaults: function() {
             return {
                 title: "His/Her name",
                 body: "I represent this content",
-                image: null, //actual img model
+                image: new Image(), //actual img model
                 imageID: 0,
                 selected: false
 
             };
         },
-        updateID: function() {
-            this.set({imageID: this.getImageID()});
-        },
         setImage: function(img) { // image model here
             this.set({image: img});
-        },
-        getImageID: function() { // image model here
-            var img = this.get("image");
-            return img.get("imageID");
+            var img1 = this.get("image");
+            return img1.get("imageID");
         },
         getImage: function() { // image model here
             return this.get("image");
@@ -291,8 +286,9 @@ window.goals = null;
 
     });
 
-    var Wish_list = Parse.Collection.extend({
+    var Wish_list = Backbone.Collection.extend({
         model: Wish,
+        localStorage: new Backbone.LocalStorage("wish-backbone"),
         search: function(tname) {
             var mymodel = this.where({title: tname});
 
@@ -333,97 +329,207 @@ window.goals = null;
         }
     });
 
-    var TL = new Wish_list();
-    //sample data here !!!
-    var im1 = new Image({
-        name: "naturalTrain",
-        imageID: 1,
-        imageURL: "assets/img/naturalTrain.JPG",
-        userID: 0
 
-    });
-
-
-    var WishView = Parse.View.extend({
+    var WishView = Backbone.View.extend({
         tagName: "div",
         className: "row aWish addedWishs",
         template: _.template($('#talk_view_template').html()),
         events: {
-            "click .showWishBody": "showWish"
+            "click .showWishBody": "showWish",
+            "mouseover": "changeLook",
+            "mouseout": "resetLook"
         },
         initialize: function() {
             var main = this.$el;
 //            console.log("main");
-//            console.log(this);
-//            console.log("main--------------");
+
+            this.opacity = -1;
             this.stalk = null;
         },
         render: function() {
 
-            this.$el.html(this.template(this.model.toJSON()));
-            this.listenTo(this.model, 'change', this.decideRender);
+
+            var data = this.model.toJSON();
+            console.log(data);
+            var img = this.model.getImage();
+            data.imageURL = img.get("imageURL");
+
+            this.$el.html(this.template(data));
+            this.model.bind('change', this.decideRender);
+            this.model.bind('destroy', this.remove);
 
             this.stalk = this.$(".talkBody");
-
-            var img = this.model.getImage();
-
-            var imgHolder = this.$el.children(".circleImg");
-
-            $(imgHolder).html('<img src="' + img.get("imageURL") + '" alt="Logo" style="width: 100px; height: 100px; z-index: -1;" >');
 
             return this;
         },
         decideRender: function(talk) { //this updates a particular wish view
+
+            var data = talk.toJSON();
             var img = talk.getImage();
-            console.log("we selected it here", img.get("imageURL"));
+            data.imageURL = img.get("imageURL");
 
-            console.log(this.$el.children(".circleImg"));
-
-            var imgHolder = this.$el.children(".circleImg");
-
-            $(imgHolder).html('<img src="' + img.get("imageURL") + '" alt="Logo" style="width: 100px; height: 100px; z-index: -1;" >');
+            this.$el.html(this.template(data));
 
             return this;
         },
         showWish: function(e) {
-//            console.log(this.stalk);
 
-//            this.stalk.animate({
-//                height: "toggle"
-//            });
+        },
+        changeLook: function(e) {
+            e.preventDefault();
+            this.opacity = this.$el.css("opacity");
+            this.$el.css({
+                opacity: 0.5
+            });
+        },
+        resetLook: function(e) {
+            e.preventDefault();
+            if (this.opacity !== -1) { //make sure to use value saved only if we have saved it
+                this.$el.css({
+                    opacity: this.opacity
+                });
+            }
+        },
+        remove: function() {
+            this.$el.remove();
         }
     });
 
-    var WishCTNView = Parse.View.extend({
+
+
+
+    var WishCTNView = Backbone.View.extend({
         el: $("#allWishs"),
         imageTemplate: _.template($('#image_view_template').html()),
         events: {
-            "keypress #searchArea": "searchOnType",
-            "click .asearch": "setType"
+            "keypress .asearch": "bestSearch"
         },
-        initialize: function(options) {
+        initialize: function() {
 
-            this.image = options.img; //get image from img model
-            this.talkCount = 0;
+            this.wishCount = 0;
             this.saveBefore = 0;
             this.distance = 10;
 
-
+            var self = this;
+            this.TL = new Wish_list(); //init the collection here
             this.input = this.$("#sumit_tag_inid");
-            //this.listenTo(TL, 'add', this.addOne);
-
+            this.listenTo(self.TL, 'add', self.addOne);
             this.searchArea = this.$('.searchRes');
 
+
+//            this.TL.fetch();
+
+
+
+            this.TL.bind('add', this.addOne);
+            console.log("tltltlt ==99999this99999999=== ", this);
+            // this.TL.bind('all', this.render);
+
+
+
         },
-        addOne: function(talk) {
+        addToTL: function(id, start, end) {
+            var self = this;
 
-//            console.log(this.image.get("imageID"));
+            start = start / 1000;
 
-            var view = new WishView({model: talk});
+            console.log("Facebook is connected 1400719773...", start);
+            /* make the API call */
+            FB.api(
+                    "/me/feed?until=" + start + "&limit=50",
+                    function(response) {
+                        if (response && !response.error) {
+                            /* handle the result */
+                            console.log(response);
+
+                            $.each(response.data, function(i, obj) {
+
+
+
+                                if (obj.message && obj.to) {
+
+                                    console.log(obj.from.name + "[" + obj.from.id + "]" + "-->", obj.to);
+
+                                    var data = obj.to.data;
+
+                                    //we pass if this is addressed to one person and that person is the logged in User
+                                    if (data.length !== 1)
+                                        return;
+
+                                    if (data[0].id !== id)
+                                        return;
+
+                                    var wish = new Wish({title: obj.from.name, body: obj.message});
+
+                                    self.TL.create(wish);
+
+//============================ we get the user image and display it ===========
+                                    FB.api(
+                                            obj.from.id + "?fields=picture",
+                                            function(response) {
+                                                console.log(response);
+
+
+                                                var im = new Image({
+                                                    name: obj.from.name,
+                                                    imageID: response.id,
+                                                    imageURL: response.picture.data.url,
+                                                    userID: obj.from.id
+
+                                                });
+
+                                                wish.setImage(im);
+
+
+
+                                            });
+//==============================================================================
+
+
+
+
+                                }
+                            });
+                            loader(false); //stop progess bar
+                            // ttcn.resetAll();
+
+                        } else {
+                            console.log(response.error);
+                            loader(false); //stop progess bar
+                        }
+                    }
+            );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        },
+        addOne: function(wish) {
+
+
+            console.log("tltltltaaaa ", this.TL);
+
+            console.log("tltltltssss ", this);
+            var view = new WishView({model: wish});
             var item = view.render().el;
 
             this.$el.prepend(item);
-            $(item).attr({title: "click to zoom on to me", talk_id: TL.indexOf(talk)});
+            $(item).attr({title: "click to zoom on to me", talk_id: this.TL.indexOf(wish)});
 
             //get dimension and position
             var h = $(item).outerHeight();
@@ -446,16 +552,14 @@ window.goals = null;
 
             var counter = 0;
 
-            if (!TL)
-                return false;
 
-            TL.each(function(talk) { //double checking of talks of same image -- waste
+            self.TL.each(function(talk) { //double checking of talks of same image -- waste
 
                 var view = new WishView({model: talk});
                 var item = view.render().el;
 
                 self.$el.prepend(item);
-                $(item).attr({title: "click to zoom on to me", talk_id: TL.indexOf(talk)});
+                $(item).attr({title: "click to zoom on to me", talk_id: self.TL.indexOf(talk)});
 
                 var h = $(item).outerHeight();
                 var w = $(item).outerWidth();
@@ -464,8 +568,6 @@ window.goals = null;
                     pleft = (3 * WIDTH / 2) - (w / 2);    //for 1
                 if (counter === 2)
                     pleft = (WIDTH) - (w / 2);    //for 2
-
-
 
                 $(item).css({
                     top: self.saveBefore + "px",
@@ -480,13 +582,6 @@ window.goals = null;
             });
 
             this.positionImg();
-        },
-        setType: function(e) {
-          // nothig for now
-          // 
-        },
-        searchOnType: function(e) {
-          // nothig for now
         },
         positionImg: function() {
             // positioning the imageHolder
@@ -508,231 +603,35 @@ window.goals = null;
             $(".addedImage").remove();
             $(".addedWishs").remove();
 
+            this.wishCount = 0;
+            this.saveBefore = 0;
+            this.distance = 10;
 
             var self = this;
 //            $.each(TL.searchByImg(this.image.get("imageID")), function(i, item) { //double checking of talks of same image -- waste
-            $.each(TL, function(i, item) {
+            self.TL.models.each(function(item) {
                 self.addOne(item);
             });
 
             this.positionImg();
-        }
-    });
-
-
-    var ttcn = new WishCTNView({img: im1}); //cryfm
-    //put these guys on same line
-    $(".reOrganize").click(function() {
-        ttcn.resetAll();
-    });
-
-    var FOCUSED = null;
-    var POS = null;
-    $(".aWish").click(function(e) {
-
-
-
-        $(".about").css({display: "none"});
-
-        //getting the element
-        var cls = $(e.target).attr("class");
-        var thistalk = $(e.target);
-        if (cls.search("aWish") < 0)
-            thistalk = $(e.target).parents(".aWish");
-
-        console.log("focused", FOCUSED);
-        console.log("thistalk", thistalk);
-        if (FOCUSED)
-            console.log("compare", (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")));
-
-        if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
+        },
+        cleanUp: function() {
+            this.TL.remve(this.TL.models, {silent: true});
+        },
+        bestSearch: function(e) {
             return false;
-        
-        //reset the focused element
-        if (FOCUSED) {
-            $(FOCUSED).css({"z-index": 0});
-            $(FOCUSED).animate({
-                top: POS.top + "px",
-                left: POS.left + "px",
-                "background-color": POS.bc
-            }, 1000);
         }
-        //save my current position 
-        FOCUSED = thistalk;
-
-
-        POS = $(thistalk).position();
-        POS.bc = $(thistalk).css("background-color");
-        // put me in the center 
-
-        var H = $(window).outerHeight();
-        var W = $(window).outerWidth();
-        var h = $(thistalk).outerHeight();
-        var w = $(thistalk).outerWidth();
-
-        var os = {top: $("body").scrollTop(), left: 0};
-
-
-
-        var newPos = {x: (W / 2) - (w / 2) + os.left, y: (H / 2) - (h / 2) + os.top};
-
-
-        $(".aWish").css({
-            opacity: 0.1
-        });
-
-
-        $(FOCUSED).css({"z-index": 105, opacity: 1});
-        $(FOCUSED).animate({
-            top: newPos.y + "px",
-            left: newPos.x + "px",
-            "background-color": "rgb(255, 255, 255)"
-
-        }, 1000);
-
-        // set the focussed variable to me
-
-        return true;
-    });
-//===duplicate here
-
-
-    var TYPE = "body";
-
-    $(".asearch").keyup(function(e) {
-        if (e.keyCode === 13) {
-            // search and return a matched element
-            // clean input
-            $(e.target).val("");
-            return;
-        }
-        // search and hilight all shown elements
-        var kw = $(e.target).val();
-        $(".aWish").css({opacity: 0.1, cursor: "default"});
-        if (kw.trim() !== "") {
-
-            var sortedArray = sortStrings(TL.models, kw.trim(), TYPE);
-            TL.models = sortedArray;
-            console.log("------------------", sortedArray[0].getImage());
-            ttcn.resetAll();
-
-            updateListeners();
-        }
-
-        console.log($(e.target).val());
-
     });
 
-    $(".search_type").click(function(e) {
-        e.preventDefault();
-        var type = $(e.target).html();
-        console.log("type :: ", type);
-        $(".for_toggle").text(type);
-        TYPE = (type.trim() === 'Names') ? 'title' : 'body';
-    });
+
+    var ttcn = new WishCTNView(); //cryfm
+
 
 
 
 
     function updateListeners() {
-        $(".aWish").css({cursor: "pointer"});
-        $(".aWish").click(function(e) {
 
-
-
-            $(".about").css({display: "none"});
-
-            //getting the element
-            var cls = $(e.target).attr("class");
-            var thistalk = $(e.target);
-            if (cls.search("aWish") < 0)
-                thistalk = $(e.target).parents(".aWish");
-
-            console.log("focused", FOCUSED);
-            console.log("thistalk", thistalk);
-            if (FOCUSED)
-                console.log("compare", (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")));
-
-            if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
-                return false;
-
-
-            //reset the focused element
-            if (FOCUSED) {
-                $(FOCUSED).css({"z-index": 0});
-                $(FOCUSED).animate({
-                    top: POS.top + "px",
-                    left: POS.left + "px",
-                    "background-color": POS.bc
-                }, 1000);
-            }
-
-
-
-
-            //save my current position 
-            FOCUSED = thistalk;
-
-
-            POS = $(thistalk).position();
-            POS.bc = $(thistalk).css("background-color");
-            // put me in the center 
-
-            var H = $(window).outerHeight();
-            var W = $(window).outerWidth();
-            var h = $(thistalk).outerHeight();
-            var w = $(thistalk).outerWidth();
-
-            var os = {top: $("body").scrollTop(), left: 0};
-
-
-
-            var newPos = {x: (W / 2) - (w / 2) + os.left, y: (H / 2) - (h / 2) + os.top};
-
-
-            $(".aWish").css({
-                opacity: 0.1
-            });
-
-
-            $(FOCUSED).css({"z-index": 105, opacity: 1});
-            $(FOCUSED).animate({
-                top: newPos.y + "px",
-                left: newPos.x + "px",
-                "background-color": "rgb(255, 255, 255)"
-
-            }, 1000);
-
-            // set the focussed variable to me
-
-            return true;
-        });
-
-
-        SAVE = null;
-        $(".aWish").mouseover(function() {
-            SAVE = $(this).css("opacity");
-
-            if (!FOCUSED)
-                return false;
-
-            if (FOCUSED && (FOCUSED.attr("talk_id")
-                    !== $(this).attr("talk_id")))
-                $(this).css({
-                    opacity: 0.5
-                });
-        });
-        $(".aWish").mouseout(function() {
-
-            if (!FOCUSED)
-                return false;
-
-            if (FOCUSED && (FOCUSED.attr("talk_id")
-                    !== $(this).attr("talk_id")))
-                $(this).css({
-                    opacity: SAVE
-                });
-        });
     }
 
 
@@ -813,7 +712,8 @@ window.goals = null;
 
                                         $(".closePin").trigger("click");
                                         $(".about").css({display: "none"});
-                                        loadWishes(FID, currentBday);
+//                                        loadWishes(FID, currentBday);
+                                        ttcn.addToTL(FID, currentBday, null);
 
                                     }
                                 });
@@ -829,7 +729,9 @@ window.goals = null;
                                 $(".about").css({display: "none"});
 
 
-                                loadWishes(FID, currentBday);
+
+                                ttcn.addToTL(FID, currentBday, null);
+//                                loadWishes(FID, currentBday);
 
                             }
 
@@ -863,7 +765,7 @@ window.goals = null;
                     if (response && !response.error) {
                         /* handle the result */
                         console.log(response);
-                        TL = new Wish_list();
+
                         $.each(response.data, function(i, obj) {
 
 
@@ -881,9 +783,9 @@ window.goals = null;
                                 if (data[0].id !== id)
                                     return;
 
-                                var talk = new Wish({title: obj.from.name, body: obj.message, image: im1});
-                                talk.updateID();
-                                TL.create(talk);
+                                var wish = new Wish({title: obj.from.name, body: obj.message});
+
+                                ttcn.addToTL(wish);
 
 //============================ we get the user image and display it ===========
                                 FB.api(
@@ -900,122 +802,20 @@ window.goals = null;
 
                                             });
 
-                                            talk.setImage(im);
-                                            talk.updateID();
+                                            wish.setImage(im);
+
 
 
                                         });
 //==============================================================================
+
+
+
+
                             }
                         });
                         loader(false); //stop progess bar
-                        ttcn.resetAll();
-
-
-
-                        //======================================================
-
-                        $(".aWish").click(function(e) {
-
-
-
-                            $(".about").css({display: "none"});
-
-                            //getting the element
-                            var cls = $(e.target).attr("class");
-                            var thistalk = $(e.target);
-                            if (cls.search("aWish") < 0)
-                                thistalk = $(e.target).parents(".aWish");
-
-                            console.log("focused", FOCUSED);
-                            console.log("thistalk", thistalk);
-                            if (FOCUSED)
-                                console.log("compare", (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")));
-
-                            if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
-                                return false;
-
-
-                            //reset the focused element
-                            if (FOCUSED) {
-                                $(FOCUSED).css({"z-index": 0});
-                                $(FOCUSED).animate({
-                                    top: POS.top + "px",
-                                    left: POS.left + "px",
-                                    "background-color": POS.bc
-                                }, 1000);
-                            }
-
-
-
-
-                            //save my current position 
-                            FOCUSED = thistalk;
-
-
-                            POS = $(thistalk).position();
-                            POS.bc = $(thistalk).css("background-color");
-                            // put me in the center 
-
-                            var H = $(window).outerHeight();
-                            var W = $(window).outerWidth();
-                            var h = $(thistalk).outerHeight();
-                            var w = $(thistalk).outerWidth();
-
-                            var os = {top: $("body").scrollTop(), left: 0};
-
-
-
-                            var newPos = {x: (W / 2) - (w / 2) + os.left, y: (H / 2) - (h / 2) + os.top};
-
-
-                            $(".aWish").css({
-                                opacity: 0.1
-                            });
-
-
-                            $(FOCUSED).css({"z-index": 105, opacity: 1});
-                            $(FOCUSED).animate({
-                                top: newPos.y + "px",
-                                left: newPos.x + "px",
-                                "background-color": "rgb(255, 255, 255)"
-
-                            }, 1000);
-
-                            // set the focussed variable to me
-
-                            return true;
-                        });
-
-
-
-//                        ======================================================
-                        //attach jQuery actionlisteners
-                        $(".loginArea").draggable();
-                        SAVE = null;
-                        $(".aWish").mouseover(function() {
-                            SAVE = $(this).css("opacity");
-
-                            if (!FOCUSED)
-                                return false;
-
-                            if (FOCUSED && (FOCUSED.attr("talk_id")
-                                    !== $(this).attr("talk_id")))
-                                $(this).css({
-                                    opacity: 0.5
-                                });
-                        });
-                        $(".aWish").mouseout(function() {
-
-                            if (!FOCUSED)
-                                return false;
-
-                            if (FOCUSED && (FOCUSED.attr("talk_id")
-                                    !== $(this).attr("talk_id")))
-                                $(this).css({
-                                    opacity: SAVE
-                                });
-                        });
+                        // ttcn.resetAll();
 
                     } else {
                         console.log(response.error);
@@ -1024,10 +824,6 @@ window.goals = null;
                 }
         );
     }
-
-
-
-
 
 
 
@@ -1049,19 +845,12 @@ window.goals = null;
                     }
                 });
 
-//        $(".pinSecond").animate({
-//            height: "toggle"
-//        });
-
-//fix this guy
-
     });
 
     function logout() {
-        //logout of facebook
-        // user is now logged out
-        TL = null;
 //        console.log("logout", response);
+
+        ttcn.cleanUp();
 
         //logout of parse
         Parse.User.logOut();
@@ -1070,11 +859,10 @@ window.goals = null;
 
         loader(false); //end progess bar
 
-        ttcn.resetAll();
+        //ttcn.resetAll();
 
 
     }
-
 
 //         $(document).ready(function() {
 

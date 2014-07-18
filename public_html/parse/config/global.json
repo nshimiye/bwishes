@@ -1,0 +1,14 @@
+{
+    "applications": {
+        "BWishes": {
+            "applicationId": "iqzupv596Guq487ZlrZsFgOpu8gVXqORR7r2RrIR", 
+            "masterKey": "iuxbdaPaypwCJQL6DFrDLH7K6ZA7NcYwBLgVfkJU"
+        }, 
+        "_default": {
+            "link": "BWishes"
+        }
+    }, 
+    "global": {
+        "parseVersion": "1.2.19"
+    }
+}

@@ -9,23 +9,129 @@ SEARCH_MODE = false;
 window.feedBacks = null;
 window.Printcard = null;
 window.goals = null;
+window.localS = null;
+//window.localStorage = null;
 (function($, Parse) {
     Parse.initialize("iqzupv596Guq487ZlrZsFgOpu8gVXqORR7r2RrIR", "dscOJXcCVLoqgwRcvft8AsWyoetCil1yJChyOizz");
 
 
-//========= save to Parse
-    if (!window.Printcard)
-        window.Printcard = Parse.Object.extend("PrintCard", {
-            defaults: function() {
+    var Printcard = Parse.Object.extend("PrintCard", {
+        defaults: function() {
 
-                return {
-                    thisUser: null, //logged in user
-                    email: "none",
-                    hardCopy: false
-                };
+            return {
+                thisUser: null, //logged in user
+                email: "none",
+                hardCopy: false,
+                wishes: []
+            };
+        },
+        toggle: function() {
+            this.save({hardCopy: !this.get("hardCopy")});
+        }
+
+    });
+
+    var Printcards = Parse.Collection.extend({
+        model: Printcard
+
+    });
+
+    var PrintcardView = Parse.View.extend({
+        tagname: "div",
+        className: "col-lg-8 col-lg-offset-2 newPrintCard",
+        template: _.template($('#print_view_template').html()),
+        events: {
+            "submit .printForm": "submitprintForm",
+            "click .close_btn": "close",
+            "click .hcopy": "sethardCopy"
+        },
+        initialize: function(e) {
+
+            this.printForm = this.$(".printForm");
+            this.printCards = new Printcards();
+            this.hardCopys = true;
+        },
+        render: function() {
+            var thisUser = Parse.User.current(); //logged in user
+            var nauth = true;
+            if (thisUser)
+                nauth = false;
+
+            this.$el.html(this.template({nologgin: nauth}));
+            this.printForm = this.$(".printForm");
+
+            return this;
+        },
+        submitprintForm: function(e) {
+            e.preventDefault();
+            var self = this;
+            console.log("print :: ", $(e.target));
+
+            console.log("printForm :: ", self.printForm);
+
+            var thisUser = Parse.User.current();// logged in user
+            var email = self.printForm.find('[name=email]').val();
+
+            var mds = ttcn.getModels();
+
+
+
+            var wsContain = "[\n";
+            mds.forEach(function(el) {
+                wsContain += "{title : " + el.get("title") + ",body : " + el.get("body") + "}";
+            });
+            wsContain += "\n]";
+
+
+            if (email.trim() === "" || !thisUser)
+                return false;
+            //saving happens here -- parse needed
+            this.printCards.create(
+                    {email: email.trim(), hardCopy: self.hardCopys, thisUser: thisUser,
+                        wishes: wsContain
+                    }
+            , {
+                success: function(pcrad) {
+                    console.log("[saved] ::", pcrad);
+                    this.hardCopys = false;
+
+                    self.$el.animate({
+                        height: "toggle"
+                    }, 500);
+                },
+                error: function(pcard, error) {
+                    console.log(error.message);
+                }
+            });
+
+            return false;
+
+        },
+        close: function(e) {
+
+            this.$el.animate({
+                height: "toggle"
+            }, 500);
+
+            return false;
+        },
+        sethardCopy: function(e) {
+
+            console.log($(e.target).text());
+            var hardCopy = $(e.target).text();
+
+//               $(e.target).html();
+            if (hardCopy.trim() === "YES") {
+                this.hardCopys = true;
+            } else {
+                this.hardCopys = false;
             }
+            console.log("hardCopy :: ", this.hardCopys);
 
-        });
+            
+        }
+    });
+
 
     var Feedback = Parse.Object.extend("FeedBack", {
         defaults: {
@@ -40,9 +146,6 @@ window.goals = null;
             if (!this.get("body")) {
                 this.set({"body": this.defaults.body});
             }
-        },
-        toggle: function() {
-            this.save({reviewed: !this.get("reviewed")});
         }
 
     });
@@ -51,8 +154,78 @@ window.goals = null;
         model: Feedback
 
     });
-    if (!window.feedBacks)
-        window.feedBacks = new FeedBacks();
+
+    var FeedbView = Parse.View.extend({
+        tagname: "div",
+        className: "col-lg-8 col-lg-offset-2 newFeedback",
+        template: _.template($('#feedb_view_template').html()),
+        events: {
+            "submit .feedBackForm": "feedBackForm",
+            "click .close_btn": "close"
+        },
+        initialize: function(e) {
+
+            this.fbForm = this.$(".feedBackForm");
+            this.feedBacks = new FeedBacks();
+
+        },
+        render: function() {
+
+
+            this.$el.html(this.template({nologgin: false}));
+            this.fbForm = this.$(".feedBackForm");
+
+            return this;
+        },
+        feedBackForm: function(e) {
+            e.preventDefault();
+            var self = this;
+            console.log("feedbacks :: ", $(e.target));
+
+            var thisUser = Parse.User.current();// logged in user
+            var name = self.fbForm.find('[name=uname]').val();
+            var body = self.fbForm.find('[name=body]').val();
+
+            if (body.trim() === "")
+                return false;
+
+            // saving happens here -- parse needed
+
+            //save it to parse and get two call back functions
+            //create a new class if it does not exist
+            this.feedBacks.create({body: body.trim(), name: name.trim(), thisUser: thisUser}, {
+                success: function(feedb) {
+                    console.log("[saved] ::", feedb);
+
+//                    feedbacks.create({body: body.trim(), name: name.trim(), thisUser: thisUser}); //not necessary
+                    //$(".wishesFeedback").trigger("click");
+
+
+                    self.$el.animate({
+                        height: "toggle"
+                    }, 500);
+
+//=====================
+                    self.fbForm.find('[name=uname]').val("");
+                    self.fbForm.find('[name=body]').val("");
+                    console.log("feedbacks :: ", self.feedBacks.models);
+
+                },
+                error: function(feedb, error) {
+                    console.log("error", error.message);
+                }
+            });
+            return false;
+        },
+        close: function(e) {
+            console.log("[saved] ::", e);
+            this.$el.animate({
+                height: "toggle"
+            }, 500);
+
+            return false;
+        },
+    });
 
     var Goal = Parse.Object.extend("Goal", {
         defaults: {
@@ -76,168 +249,193 @@ window.goals = null;
 
 
     var Goals = Parse.Collection.extend({
-        model: Goal,
+        model: Goal
     });
-    if (!window.goals)
-        window.goals = new Goals();
 
+    var GoalView = Parse.View.extend({
+        tagname: "div",
+        className: "col-lg-8 col-lg-offset-2 newGoal",
+        template: _.template($('#goal_view_template').html()),
+        events: {
+            "submit .goalForm": "goalForm",
+            "click .close_btn": "close"
+        },
+        initialize: function(e) {
+
+            this.gform = this.$(".goalForm");
+            this.goals = new Goals();
+
+        },
+        render: function() {
+
+            var thisUser = Parse.User.current(); //logged in user
+            var nauth = true;
+            if (thisUser)
+                nauth = false;
+
+            this.$el.html(this.template({nologgin: nauth}));
+            this.gform = this.$(".goalForm");
+
+            return this;
+        },
+        goalForm: function(e) {
+            console.log("[saved] ::", e);
+            var self = this;
+            var thisUser = Parse.User.current(); //logged in user
+            var body = self.gform.find('[name=body]').val();
+
+            if (body.trim() === "" || !thisUser)
+                return false;
+
+            self.goals.create({body: body.trim(), thisUser: thisUser}, {
+                success: function(goal) {
+                    console.log("[saved] ::", goal);
+
+                    self.$el.animate({
+                        height: "toggle"
+                    }, 500);
+
+                    self.gform.find('[name=body]').val("");
+                },
+                error: function(goal, error) {
+                    console.log(error.message); //handle errors here
+                }
+            });
+            return false;
+        },
+        close: function(e) {
+            console.log("[close] ::", e);
+            this.$el.animate({
+                height: "toggle"
+            }, 500);
+
+            return false;
+        },
+    });
+
+    var MenuViews = Parse.View.extend({
+        el: $(".menu_holder"),
+        events: {
+            "keypress .asearch": "bestSearch",
+            "click .wishesPrint": "wishesPrint",
+            "click .newWishClose": "setaGoal",
+            "click .wishesFeedback": "wishesFeedback",
+            "click .wishesAbout": "wishesAbout",
+            "click .loginFB": "loginFB",
+            "click .search_type": "search_type"
+        },
+        initialize: function() {
+
+            this.body = $(".form_holder"),
+                    this.feedBackView = new FeedbView({caller: this});
+            this.goalView = new GoalView({caller: this});
+            this.printCardView = new PrintcardView({caller: this});
+
+            this.sTYPE = "body";
+
+            this.render();
+
+        },
+        render: function() {
+            this.body.append(this.goalView.render().el);
+            this.body.append(this.feedBackView.render().el);
+            this.body.append(this.printCardView.render().el);
+        }, refresh: function() {
+
+            this.feedBackView.remove();
+            this.goalView.remove();
+            this.printCardView.remove();
+            this.body.empty();
+
+            this.feedBackView = new FeedbView({caller: this});
+            this.goalView = new GoalView({caller: this});
+            this.printCardView = new PrintcardView({caller: this});
+            this.body.append(this.goalView.render().el);
+            this.body.append(this.feedBackView.render().el);
+            this.body.append(this.printCardView.render().el);
+        },
+        loginFB: function() {
+            console.log("88888888888loginFB88888888888888", this.body);
+//            I will be creating my search function here
+            return true;
+        },
+        wishesAbout: function(e) {
+
+//            I will be creating my search function here
+            console.log("88888888888wishesAbout88888888888888", this.body);
+            $(".about").animate({height: "toggle"}, 500);
+            return false;
+        }, search_type: function(e) {
+
+
+            e.preventDefault();
+            var type = $(e.target).html();
+            console.log("type :: ", type);
+            this.$(".for_toggle").text(type);
+            this.sTYPE = (type.trim() === 'Names') ? 'title' : 'body';
+
+
+        },
+        bestSearch: function(e) {
+            console.log("88888888888bestSearch88888888888888[ " + this.sTYPE + " ]", $(e.target).val());
+            var keyword = $(e.target).val();
+//            I will be creating my search function here
+            var wishes = ttcn.getModels();
+
+            console.log("8888888before8888888888888[ " + this.sTYPE + " ]", wishes);
+
+            $(e.target).val();
+            var orderedWishes = sortStrings(wishes, keyword.trim(), this.sTYPE);
+            console.log("88888888888afterh88888888888888[ ", orderedWishes);
+            ttcn.setModels(orderedWishes);
+            ttcn.resetAll();
+
+        },
+        setaGoal: function(e) {
+            console.log("88888888888setaGoal88888888888888", this.body);
+            this.clearHolder(e);
+            this.goalView.close(e); // opening the form
+
+            return false;
+        },
+        wishesPrint: function(e) {
+            console.log("88888888888loginFB88888888888888", this.body);
+            this.clearHolder(e);
+            this.printCardView.close(e); // opening the form
+            return false;
+        },
+        wishesFeedback: function(e) {
+            console.log("88888888888wishesFeedback88888888888888", this.body);
+            this.clearHolder(e);
+            this.feedBackView.close(e); //opening the form here
+        },
+        clearHolder: function(e) {
+            console.log("88888888888loginFB88888888888888", this.body);
+            //clear the form holder
+            this.body.children().css({
+                display: "none"
+            });
+            return false;
+        }
+    });
+    var menuView = new MenuViews();
 
 
 //================================================================================================================
 
 
 
-
-
-
-//    $(document).ready(function() {
-    var hardCopys = false;
-    //save information about card printing
-    $(".hcopy").click(function(e) {
-        e.preventDefault();
-        var hardCopy = $(e.target).html();
-        if (hardCopy.trim() === "YES") {
-            hardCopys = true;
-        } else {
-            hardCopys = false;
-        }
-        console.log("hardCopy :: ", hardCopy);
-    });
-
-    $(".printForm").submit(function(e) {
-        e.preventDefault();
-
-        var pcForm = $(e.target);
-        console.log("printForm :: ", pcForm);
-
-        var thisUser = Parse.User.current();// logged in user
-        var email = pcForm.find('[name=email]').val();
-        var hardCopy = hardCopys;//to be set
-
-
-        if (email.trim() === "" || !thisUser)
-            return false;
-        //saving happens here -- parse needed
-
-
-        //create a new class if it does not exist
-
-        var printCard = new window.Printcard();
-        printCard.set(
-                {email: email.trim(), hardCopy: hardCopy, thisUser: thisUser}
-        );
-        printCard.save(null, {
-            success: function(out) {
-                console.log("[saved] ::", out);
-                hardCopys = false;
-
-                $(".newPrintHere").animate({
-                    height: "toggle"
-                }, 1000);
-            },
-            error: function(quote, error) {
-                console.log(error.message);
-            }
-        });
-
-    });
-
-
-    //save feedback 
-    $(".feedBackSubmit").click(function(e) { //anybody can send me feedback
-        e.preventDefault();
-        console.log(window.feedBacks);
-
-
-
-        var fbForm = $(".feedBackForm");
-        console.log("feedbacks :: ", window.feedBacks);
-
-        var thisUser = Parse.User.current();// logged in user
-        var name = fbForm.find('[name=uname]').val();
-        var body = fbForm.find('[name=body]').val();
-
-//saving happens here -- parse needed
-
-        //save it to parse and get two call back functions
-        //create a new class if it does not exist
-        window.feedBacks.create({body: body.trim(), name: name.trim(), thisUser: thisUser}, {
-            success: function(out) {
-                console.log("[saved] ::", out);
-
-//                    feedbacks.create({body: body.trim(), name: name.trim(), thisUser: thisUser}); //not necessary
-                //$(".wishesFeedback").trigger("click");
-
-
-                $(".newFeedback").animate({
-                    height: "toggle"
-                }, 1000);
-
-//=====================
-                fbForm.find('[name=uname]').val("");
-                fbForm.find('[name=body]').val("");
-                console.log("feedbacks :: ", feedBacks.models);
-
-            },
-            error: function(quote, error) {
-                console.log("error", error.message);
-            }
-        });
-
-        return false;
-    });
-
-    //save goal 
-    $(".goalSubmit").click(function(e) {
-        e.preventDefault();
-
-        var gForm = $(".goalForm");
-
-        var thisUser = Parse.User.current(); //logged in user
-        var body = gForm.find('[name=body]').val();
-
-        if (body.trim() === "" || !thisUser)
-            return false;
-
-//saving happens here
-
-        //create a new class if it does not exist
-
-
-        window.goals.create({body: body.trim(), thisUser: thisUser}, {
-            success: function(out) {
-                console.log("[saved] ::", out);
-
-//            $(".newWishClose").trigger("click");
-                $(".newWish").animate({
-                    height: "toggle"
-                }, 1000);
-                //=====================
-
-                gForm.find('[name=body]').val("");
-            },
-            error: function(goal, error) {
-                console.log(error.message); //handle errors here
-            }
-        });
-        return false;
-    });
-
-//
-//    });
-
-
 //==============================================================================
 
 
 
-    var Image = Parse.Object.extend("Image",{
+    var Image = Backbone.Model.extend({
         defaults: function() {
 
             return {
                 name: "His/Her name",
                 imageID: 0,
-                imageURL: "//myimage",
+                imageURL: "bt/img/bwishesy.png",
                 userID: 0,
                 uploadTime: new Date()
             };
@@ -250,26 +448,22 @@ window.goals = null;
         }
     });
 
-    var Wish = Parse.Object.extend("Wish",{
+    var Wish = Backbone.Model.extend({
         defaults: function() {
             return {
+                userID: 0,
                 title: "His/Her name",
                 body: "I represent this content",
-                image: null, //actual img model
+                image: new Image(), //actual img model
                 imageID: 0,
                 selected: false
 
             };
         },
-        updateID: function() {
-            this.set({imageID: this.getImageID()});
-        },
         setImage: function(img) { // image model here
             this.set({image: img});
-        },
-        getImageID: function() { // image model here
-            var img = this.get("image");
-            return img.get("imageID");
+            var img1 = this.get("image");
+            return img1.get("imageID");
         },
         getImage: function() { // image model here
             return this.get("image");
@@ -281,18 +475,27 @@ window.goals = null;
 
             if (options !== null) {
                 this.set({selected: options.select});
-
             }
             else {
-                this.save({selected: !this.get("selected")});
+                this.set({selected: !this.get("selected")});
             }
         }
 
 
     });
 
-    var Wish_list = Parse.Collection.extend({
+    var Wish_list = Backbone.Collection.extend({
         model: Wish,
+        localStorage: new Backbone.LocalStorage("wish-backbone"),
+        initialize: function() {
+            window.localS = this.localStorage;
+            if (this.localStorage.name === "wish-backbone") {
+
+                this.localStorage.localStorage().clear();
+                this.localStorage.records = [];
+                this.reset();
+            }
+        },
         search: function(tname) {
             var mymodel = this.where({title: tname});
 
@@ -313,6 +516,21 @@ window.goals = null;
 
             return mymodels;
         },
+        searchByid: function(userID) {
+
+            var wish = null;
+
+            $.each(this.models, function(i, thisWish) {
+                //populate search result area
+                var uid = thisWish.get("userID");
+
+                if (uid === userID) {
+                    wish = thisWish;
+                    return wish;
+                }
+            });
+            return wish;
+        },
         searchTag: function(options) {
 
             var sn = options.searchId;
@@ -330,110 +548,200 @@ window.goals = null;
             });
 
             return holder;
+        },
+        clearStorage: function() {
+            console.log(this.localStorage);
+            if (this.localStorage.name === "wish-backbone") {
+
+                this.localStorage.localStorage().clear();
+                this.localStorage.records = [];
+                this.reset();
+            }
+
+
+
         }
     });
 
-    var TL = new Wish_list();
-    //sample data here !!!
-    var im1 = new Image({
-        name: "naturalTrain",
-        imageID: 1,
-        imageURL: "assets/img/naturalTrain.JPG",
-        userID: 0
 
-    });
-
-
-    var WishView = Parse.View.extend({
+    var WishView = Backbone.View.extend({
         tagName: "div",
         className: "row aWish addedWishs",
         template: _.template($('#talk_view_template').html()),
         events: {
-            "click .showWishBody": "showWish"
+            "click .showWishBody": "showWish",
+            "mouseover": "changeLook",
+            "mouseout": "resetLook"
         },
         initialize: function() {
-            var main = this.$el;
+            this.main = this.$el;
 //            console.log("main");
-//            console.log(this);
-//            console.log("main--------------");
+
+            this.opacity = -1;
             this.stalk = null;
         },
         render: function() {
 
-            this.$el.html(this.template(this.model.toJSON()));
-            this.listenTo(this.model, 'change', this.decideRender);
+            var self = this;
+            var data = this.model.toJSON();
+
+            console.log("decideRender", data);
+
+            var img = self.model.getImage();
+            console.log("decideRender", img);
+            //my search enginee is turning models into objects -- need to check wwhy
+            try {
+                data.imageURL = img.get("imageURL");
+            } catch (err) {
+                data.imageURL = img.imageURL;
+            }
+
+            this.$el.html(self.template(data));
+            self.main = self.$el;
+            self.listenTo(self.model, 'change', self.decideRender);
+//            self.listenTo(self.model, 'destroy', self.remove);
+
+
 
             this.stalk = this.$(".talkBody");
 
-            var img = this.model.getImage();
-
-            var imgHolder = this.$el.children(".circleImg");
-
-            $(imgHolder).html('<img src="' + img.get("imageURL") + '" alt="Logo" style="width: 100px; height: 100px; z-index: -1;" >');
-
             return this;
         },
-        decideRender: function(talk) { //this updates a particular wish view
-            var img = talk.getImage();
-            console.log("we selected it here", img.get("imageURL"));
+        decideRender: function() { //this updates a particular wish view
+            var self = this;
+            var wish = this.model.toJSON();
 
-            console.log(this.$el.children(".circleImg"));
+            if (!wish.body) {
 
-            var imgHolder = this.$el.children(".circleImg");
+                console.log("decideRender", wish);
+                console.log("wish.body", self);
+                self.remove();
 
-            $(imgHolder).html('<img src="' + img.get("imageURL") + '" alt="Logo" style="width: 100px; height: 100px; z-index: -1;" >');
+                return false;
+            }
+
+//            var data = wish.toJSON();
+//            var img = wish.getImage();
+//            console.log("render-------", img);
+//            if (img)
+//                data.imageURL = img.get("imageURL");
+//
+//            console.log("decideRender", data);
+//            this.$el.html(this.template(data));
 
             return this;
         },
         showWish: function(e) {
-//            console.log(this.stalk);
 
-//            this.stalk.animate({
-//                height: "toggle"
-//            });
+        },
+        changeLook: function(e) {
+            e.preventDefault();
+            this.opacity = this.$el.css("opacity");
+            this.$el.css({
+                opacity: 0.5
+            });
+        },
+        resetLook: function(e) {
+            e.preventDefault();
+            if (this.opacity !== -1) { //make sure to use value saved only if we have saved it
+                this.$el.css({
+                    opacity: this.opacity
+                });
+            }
+        },
+        cleanView: function() {
+
         }
     });
 
-    var WishCTNView = Parse.View.extend({
+
+
+
+    var WishCTNView = Backbone.View.extend({
         el: $("#allWishs"),
         imageTemplate: _.template($('#image_view_template').html()),
         events: {
-            "keypress #searchArea": "searchOnType",
-            "click .asearch": "setType"
+            "keypress .asearch": "bestSearch"
         },
-        initialize: function(options) {
+        initialize: function() {
 
-            this.image = options.img; //get image from img model
-            this.talkCount = 0;
+            this.wishCount = 0;
             this.saveBefore = 0;
             this.distance = 10;
 
+            var self = this;
+            this.TL = new Wish_list(); //init the collection here
 
             this.input = this.$("#sumit_tag_inid");
-            //this.listenTo(TL, 'add', this.addOne);
-
+            this.listenTo(self.TL, 'add', self.addOne);
             this.searchArea = this.$('.searchRes');
+            this.WIDTH = $(document).outerWidth() / 2;
+
+            this.counter = 0;
+
+
+            // this.TL.bind('all', this.render);
+
+
 
         },
-        addOne: function(talk) {
+        setModels: function(models) {
+            console.log("tltltlt ==99999this99999999=== ", this.TL.models);
+            this.TL.models = models;
+            console.log("tltltlt ==99999this99999999=== ", this.TL.models);
+        }
+        ,
+        getModels: function() {
+            return this.TL.models;
+        },
+        addToTL: function(wish) {
+            this.TL.create(wish);
 
-//            console.log(this.image.get("imageID"));
+        },
+        addOne: function(wish) {
+            var self = this;
+            if (self.saveBefore === 0) {
+                self.saveBefore = 65;
+            }
 
-            var view = new WishView({model: talk});
+            console.log("tltltltaaaa ", this.TL);
+
+            console.log("tltltltssss ", this);
+            var view = new WishView({model: wish});
             var item = view.render().el;
 
             this.$el.prepend(item);
-            $(item).attr({title: "click to zoom on to me", talk_id: TL.indexOf(talk)});
+            $(item).attr({title: "click to zoom on to me", talk_id: self.TL.indexOf(wish)});
 
-            //get dimension and position
             var h = $(item).outerHeight();
+            var w = $(item).outerWidth();
+            var pleft = (self.WIDTH / 2) - (w / 2);  //for 0
+            if (self.counter === 1)
+                pleft = (3 * self.WIDTH / 2) - (w / 2);    //for 1
+            if (self.counter === 2)
+                pleft = (self.WIDTH) - (w / 2);    //for 2
 
             $(item).css({
-                top: this.saveBefore + "px"
+                top: self.saveBefore + "px",
+                left: pleft + "px"
             });
-            var y = $(item).position();
-            this.saveBefore = y.top + h + this.distance;
-            //console.log("next position", this.saveBefore);
+
+            self.counter = (self.counter + 1) % 3;
+            if (self.counter === 2 || self.counter === 0) {
+                var y = $(item).position();
+                self.saveBefore = y.top + h + self.distance;
+            }
+            this.positionImg();
+
+
+//            ======update cover height ======
+            var ht = self.saveBefore + $(item).height();
+            console.log(ht);
+            if (ht > $(".theImage").height())
+                $(".theImage").css({
+                    height: ht
+                });
+
 
         },
         resetAll: function() {
@@ -442,51 +750,40 @@ window.goals = null;
             var self = this;
             self.saveBefore = 65;
 
-            var WIDTH = $(document).outerWidth() / 2;
+            self.WIDTH = $(document).outerWidth() / 2;
 
-            var counter = 0;
+            self.counter = 0;
 
-            if (!TL)
-                return false;
 
-            TL.each(function(talk) { //double checking of talks of same image -- waste
+            self.TL.each(function(wish) { //double checking of talks of same image -- waste
 
-                var view = new WishView({model: talk});
+                var view = new WishView({model: wish});
                 var item = view.render().el;
 
                 self.$el.prepend(item);
-                $(item).attr({title: "click to zoom on to me", talk_id: TL.indexOf(talk)});
+                $(item).attr({title: "click to zoom on to me", talk_id: self.TL.indexOf(wish)});
 
                 var h = $(item).outerHeight();
                 var w = $(item).outerWidth();
-                var pleft = (WIDTH / 2) - (w / 2);  //for 0
-                if (counter === 1)
-                    pleft = (3 * WIDTH / 2) - (w / 2);    //for 1
-                if (counter === 2)
-                    pleft = (WIDTH) - (w / 2);    //for 2
-
-
+                var pleft = (self.WIDTH / 2) - (w / 2);  //for 0
+                if (self.counter === 1)
+                    pleft = (3 * self.WIDTH / 2) - (w / 2);    //for 1
+                if (self.counter === 2)
+                    pleft = (self.WIDTH) - (w / 2);    //for 2
 
                 $(item).css({
                     top: self.saveBefore + "px",
                     left: pleft + "px"
                 });
 
-                counter = (counter + 1) % 3;
-                if (counter === 2 || counter === 0) {
+                self.counter = (self.counter + 1) % 3;
+                if (self.counter === 2 || self.counter === 0) {
                     var y = $(item).position();
                     self.saveBefore = y.top + h + self.distance;
                 }
             });
 
-            this.positionImg();
-        },
-        setType: function(e) {
-          // nothig for now
-          // 
-        },
-        searchOnType: function(e) {
-          // nothig for now
+            self.positionImg();
         },
         positionImg: function() {
             // positioning the imageHolder
@@ -508,232 +805,50 @@ window.goals = null;
             $(".addedImage").remove();
             $(".addedWishs").remove();
 
+            this.wishCount = 0;
+            this.saveBefore = 0;
+            this.distance = 10;
+
 
             var self = this;
 //            $.each(TL.searchByImg(this.image.get("imageID")), function(i, item) { //double checking of talks of same image -- waste
-            $.each(TL, function(i, item) {
+            self.TL.models.each(function(item) {
                 self.addOne(item);
             });
 
             this.positionImg();
-        }
-    });
-
-
-    var ttcn = new WishCTNView({img: im1}); //cryfm
-    //put these guys on same line
-    $(".reOrganize").click(function() {
-        ttcn.resetAll();
-    });
-
-    var FOCUSED = null;
-    var POS = null;
-    $(".aWish").click(function(e) {
+        },
+        cleanUp: function() {
 
 
 
-        $(".about").css({display: "none"});
+            console.log("sss", this.TL.length);
+            var self = this;
 
-        //getting the element
-        var cls = $(e.target).attr("class");
-        var thistalk = $(e.target);
-        if (cls.search("aWish") < 0)
-            thistalk = $(e.target).parents(".aWish");
-
-        console.log("focused", FOCUSED);
-        console.log("thistalk", thistalk);
-        if (FOCUSED)
-            console.log("compare", (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")));
-
-        if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
-            return false;
-        
-        //reset the focused element
-        if (FOCUSED) {
-            $(FOCUSED).css({"z-index": 0});
-            $(FOCUSED).animate({
-                top: POS.top + "px",
-                left: POS.left + "px",
-                "background-color": POS.bc
-            }, 1000);
-        }
-        //save my current position 
-        FOCUSED = thistalk;
-
-
-        POS = $(thistalk).position();
-        POS.bc = $(thistalk).css("background-color");
-        // put me in the center 
-
-        var H = $(window).outerHeight();
-        var W = $(window).outerWidth();
-        var h = $(thistalk).outerHeight();
-        var w = $(thistalk).outerWidth();
-
-        var os = {top: $("body").scrollTop(), left: 0};
-
-
-
-        var newPos = {x: (W / 2) - (w / 2) + os.left, y: (H / 2) - (h / 2) + os.top};
-
-
-        $(".aWish").css({
-            opacity: 0.1
-        });
-
-
-        $(FOCUSED).css({"z-index": 105, opacity: 1});
-        $(FOCUSED).animate({
-            top: newPos.y + "px",
-            left: newPos.x + "px",
-            "background-color": "rgb(255, 255, 255)"
-
-        }, 1000);
-
-        // set the focussed variable to me
-
-        return true;
-    });
-//===duplicate here
-
-
-    var TYPE = "body";
-
-    $(".asearch").keyup(function(e) {
-        if (e.keyCode === 13) {
-            // search and return a matched element
-            // clean input
-            $(e.target).val("");
-            return;
-        }
-        // search and hilight all shown elements
-        var kw = $(e.target).val();
-        $(".aWish").css({opacity: 0.1, cursor: "default"});
-        if (kw.trim() !== "") {
-
-            var sortedArray = sortStrings(TL.models, kw.trim(), TYPE);
-            TL.models = sortedArray;
-            console.log("------------------", sortedArray[0].getImage());
-            ttcn.resetAll();
-
-            updateListeners();
-        }
-
-        console.log($(e.target).val());
-
-    });
-
-    $(".search_type").click(function(e) {
-        e.preventDefault();
-        var type = $(e.target).html();
-        console.log("type :: ", type);
-        $(".for_toggle").text(type);
-        TYPE = (type.trim() === 'Names') ? 'title' : 'body';
-    });
-
-
-
-
-    function updateListeners() {
-        $(".aWish").css({cursor: "pointer"});
-        $(".aWish").click(function(e) {
-
-
-
-            $(".about").css({display: "none"});
-
-            //getting the element
-            var cls = $(e.target).attr("class");
-            var thistalk = $(e.target);
-            if (cls.search("aWish") < 0)
-                thistalk = $(e.target).parents(".aWish");
-
-            console.log("focused", FOCUSED);
-            console.log("thistalk", thistalk);
-            if (FOCUSED)
-                console.log("compare", (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")));
-
-            if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
-                return false;
-
-
-            //reset the focused element
-            if (FOCUSED) {
-                $(FOCUSED).css({"z-index": 0});
-                $(FOCUSED).animate({
-                    top: POS.top + "px",
-                    left: POS.left + "px",
-                    "background-color": POS.bc
-                }, 1000);
-            }
-
-
-
-
-            //save my current position 
-            FOCUSED = thistalk;
-
-
-            POS = $(thistalk).position();
-            POS.bc = $(thistalk).css("background-color");
-            // put me in the center 
-
-            var H = $(window).outerHeight();
-            var W = $(window).outerWidth();
-            var h = $(thistalk).outerHeight();
-            var w = $(thistalk).outerWidth();
-
-            var os = {top: $("body").scrollTop(), left: 0};
-
-
-
-            var newPos = {x: (W / 2) - (w / 2) + os.left, y: (H / 2) - (h / 2) + os.top};
-
-
-            $(".aWish").css({
-                opacity: 0.1
+            self.TL.models.forEach(function(wish) {
+                wish.clear();
             });
 
+            self.TL.clearStorage();
+            //this.resetAll();
 
-            $(FOCUSED).css({"z-index": 105, opacity: 1});
-            $(FOCUSED).animate({
-                top: newPos.y + "px",
-                left: newPos.x + "px",
-                "background-color": "rgb(255, 255, 255)"
+            self.wishCount = 0;
+            self.saveBefore = 0;
+            self.distance = 10;
+            self.WIDTH = $(document).outerWidth() / 2;
 
-            }, 1000);
-
-            // set the focussed variable to me
-
-            return true;
-        });
+            self.counter = 0;
 
 
-        SAVE = null;
-        $(".aWish").mouseover(function() {
-            SAVE = $(this).css("opacity");
+        },
+        bestSearch: function(e) {
+            return false;
+        }
+    });
 
-            if (!FOCUSED)
-                return false;
 
-            if (FOCUSED && (FOCUSED.attr("talk_id")
-                    !== $(this).attr("talk_id")))
-                $(this).css({
-                    opacity: 0.5
-                });
-        });
-        $(".aWish").mouseout(function() {
+    var ttcn = new WishCTNView(); //cryfm
 
-            if (!FOCUSED)
-                return false;
-
-            if (FOCUSED && (FOCUSED.attr("talk_id")
-                    !== $(this).attr("talk_id")))
-                $(this).css({
-                    opacity: SAVE
-                });
-        });
-    }
 
 
 
@@ -756,7 +871,7 @@ window.goals = null;
 
         if (user) {
             // Logged into your app and Facebook.
-
+            menuView.refresh();
             //=========================== parse login signedUp
 
             FB.api(
@@ -863,14 +978,14 @@ window.goals = null;
                     if (response && !response.error) {
                         /* handle the result */
                         console.log(response);
-                        TL = new Wish_list();
+                        var count = 0;
                         $.each(response.data, function(i, obj) {
 
 
 
                             if (obj.message && obj.to) {
 
-                                console.log(obj.from.name + "[" + obj.from.id + "]" + "-->", obj.to);
+
 
                                 var data = obj.to.data;
 
@@ -881,9 +996,8 @@ window.goals = null;
                                 if (data[0].id !== id)
                                     return;
 
-                                var talk = new Wish({title: obj.from.name, body: obj.message, image: im1});
-                                talk.updateID();
-                                TL.create(talk);
+                                console.log("iout", count);
+
 
 //============================ we get the user image and display it ===========
                                 FB.api(
@@ -900,122 +1014,28 @@ window.goals = null;
 
                                             });
 
-                                            talk.setImage(im);
-                                            talk.updateID();
+                                            var wish = new Wish({title: obj.from.name, body: obj.message, userID: obj.from.id});
+                                            wish.setImage(im);
+                                            ttcn.addToTL(wish);
+
+//                                            var md = ttcn.TL.searchByid(response.id);
+//                                            console.log("mdddd", md);
+//                                            md.setImage(im);
+
+//  console.log(obj.from.name + "[" + obj.from.id + "]" + "-->", obj.to);
 
 
                                         });
+
 //==============================================================================
+
+
+
+
                             }
                         });
                         loader(false); //stop progess bar
-                        ttcn.resetAll();
 
-
-
-                        //======================================================
-
-                        $(".aWish").click(function(e) {
-
-
-
-                            $(".about").css({display: "none"});
-
-                            //getting the element
-                            var cls = $(e.target).attr("class");
-                            var thistalk = $(e.target);
-                            if (cls.search("aWish") < 0)
-                                thistalk = $(e.target).parents(".aWish");
-
-                            console.log("focused", FOCUSED);
-                            console.log("thistalk", thistalk);
-                            if (FOCUSED)
-                                console.log("compare", (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")));
-
-                            if (FOCUSED && (FOCUSED.attr("talk_id") === thistalk.attr("talk_id")))
-                                return false;
-
-
-                            //reset the focused element
-                            if (FOCUSED) {
-                                $(FOCUSED).css({"z-index": 0});
-                                $(FOCUSED).animate({
-                                    top: POS.top + "px",
-                                    left: POS.left + "px",
-                                    "background-color": POS.bc
-                                }, 1000);
-                            }
-
-
-
-
-                            //save my current position 
-                            FOCUSED = thistalk;
-
-
-                            POS = $(thistalk).position();
-                            POS.bc = $(thistalk).css("background-color");
-                            // put me in the center 
-
-                            var H = $(window).outerHeight();
-                            var W = $(window).outerWidth();
-                            var h = $(thistalk).outerHeight();
-                            var w = $(thistalk).outerWidth();
-
-                            var os = {top: $("body").scrollTop(), left: 0};
-
-
-
-                            var newPos = {x: (W / 2) - (w / 2) + os.left, y: (H / 2) - (h / 2) + os.top};
-
-
-                            $(".aWish").css({
-                                opacity: 0.1
-                            });
-
-
-                            $(FOCUSED).css({"z-index": 105, opacity: 1});
-                            $(FOCUSED).animate({
-                                top: newPos.y + "px",
-                                left: newPos.x + "px",
-                                "background-color": "rgb(255, 255, 255)"
-
-                            }, 1000);
-
-                            // set the focussed variable to me
-
-                            return true;
-                        });
-
-
-
-//                        ======================================================
-                        //attach jQuery actionlisteners
-                        $(".loginArea").draggable();
-                        SAVE = null;
-                        $(".aWish").mouseover(function() {
-                            SAVE = $(this).css("opacity");
-
-                            if (!FOCUSED)
-                                return false;
-
-                            if (FOCUSED && (FOCUSED.attr("talk_id")
-                                    !== $(this).attr("talk_id")))
-                                $(this).css({
-                                    opacity: 0.5
-                                });
-                        });
-                        $(".aWish").mouseout(function() {
-
-                            if (!FOCUSED)
-                                return false;
-
-                            if (FOCUSED && (FOCUSED.attr("talk_id")
-                                    !== $(this).attr("talk_id")))
-                                $(this).css({
-                                    opacity: SAVE
-                                });
-                        });
 
                     } else {
                         console.log(response.error);
@@ -1031,10 +1051,6 @@ window.goals = null;
 
 
 
-
-
-
-
     $(".FBLoggin").click(function() {
 
         if (Parse.User.current()) {//logging out
@@ -1042,26 +1058,21 @@ window.goals = null;
             return;
         }
         //logging in
-        Parse.FacebookUtils.login('user_friends, public_profile,user_birthday,read_stream',
+        Parse.FacebookUtils.logIn('user_friends, public_profile,user_birthday,read_stream',
                 {
                     success: function(user) {
                         statusChangeCallback(user);
                     }
                 });
 
-//        $(".pinSecond").animate({
-//            height: "toggle"
-//        });
-
-//fix this guy
-
     });
 
     function logout() {
-        //logout of facebook
-        // user is now logged out
-        TL = null;
 //        console.log("logout", response);
+
+        ttcn.cleanUp();
+
+        console.log("sss after donennnnnnneeee", 1);
 
         //logout of parse
         Parse.User.logOut();
@@ -1069,12 +1080,11 @@ window.goals = null;
         $(".about").css({display: "block"});
 
         loader(false); //end progess bar
-
-        ttcn.resetAll();
+        menuView.refresh();
+        //ttcn.resetAll();
 
 
     }
-
 
 //         $(document).ready(function() {
 

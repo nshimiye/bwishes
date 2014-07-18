@@ -13,11 +13,12 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+
         <title>Birthday Wishes</title>
 
         <!-- Bootstrap -->
         <link href="bt/css/bootstrap.min.css" rel="stylesheet">
-
+        <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
         <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -68,7 +69,7 @@
                 top:0;
                 left: 500px;
                 width: 500px;
-                
+
             }
             .talkBody{
                 font-weight: 500;
@@ -79,6 +80,25 @@
             }
             .form-control::-webkit-input-placeholder { color: #A9B4BD; }
 
+            .newGoal{
+                color: rgb(212, 225, 236);
+                margin-bottom: 15px; display: none;
+            }
+            .newFeedback{
+                color: rgb(212, 225, 236);
+                margin-bottom: 15px; display: none;
+            }
+            .newPrintCard{
+                margin-bottom: 15px; color: rgb(212, 225, 236); display: none;
+            }
+            .asearch{
+                background-color: rgba(71, 85, 89, 0.45);
+                width:100%;
+                color: white;
+            }
+            .asearch :focus{
+                background-color: #A9B4BD;
+            }
         </style>
     </head>
     <body  style="
@@ -89,7 +109,7 @@
            ">
         <div id="fb-root"></div>
 
-        <div class="navbar navbar-default navbar-fixed-top" role="navigation" style="
+        <div class="navbar navbar-default navbar-fixed-top menu_holder" role="navigation" style="
              background-color:rgba(255, 255, 255, 0.0);
              border-color: rgba(0,0,0,0.0);
              z-index: 100;">
@@ -126,8 +146,7 @@
                     <form class="navbar-form navbar-right" role="search" style="width: 40%;" >
                         <div class="input-group" style="width:100%;">
 
-                            <input type="text" class="form-control asearch" placeholder="search for wishes, intimate friends ..." style="background-color: rgba(255, 255, 255, 0);
-                                   width:100%;" >
+                            <input type="text" class="form-control asearch" placeholder="search for wishes, intimate friends ..."  >
                             <div class="input-group-btn">
                                 <button type="button" class="btn btn-default dropdown-toggle for_toggle" data-toggle="dropdown">
                                     Sort by <span class="caret"></span></button>
@@ -152,87 +171,18 @@
              z-index: 110;
 
              ">
+
+
+
             <div class="col-lg-12 " style="
                  background-image: url('bt/img/newentry.png');
                  background-repeat: no-repeat;
                  background-color: rgb(197, 197, 197);
                  box-shadow: inset 0 -8px 8px -8px #000; padding: 0;"  >
-                <div class="col-lg-12" style="
+                <div class="col-lg-12 form_holder"  style="
                      background-color: rgba(255, 255, 255, 0.5);
                      box-shadow: inset 0 -8px 8px -8px #000;
                      ">
-                    <div class="col-lg-8 col-lg-offset-2 newWish" style="
-                         color: rgb(212, 225, 236);
-                         margin-bottom: 15px; display: none;">
-                        <form class="goalForm" role="form" style="margin-top: 15px">
-                            <span class="el"></span>
-                            <div class="form-group you" >
-                                <textarea  class="form-control" name="body" placeholder="Goal for a new era ..." rows="3"></textarea>
-                            </div>
-
-                            <button type="button" class="btn btn-primary goalSubmit you">
-                                <span style="padding-left: 3em; padding-right: 3em;">Save</span>
-
-                            </button>
-                            <a href="#" class="btn btn-danger newWishClose">cancel</a>
-                        </form>
-
-                    </div>
-
-                    <!--feedback-->
-                    <div class="col-lg-8 col-lg-offset-2 newFeedback" style="
-                         color: rgb(212, 225, 236);
-                         margin-bottom: 15px; display: none;">
-                        <form class="feedBackForm" role="form" style="margin-top: 15px">
-                            <div class="form-group">
-                                <input type="text"  class="form-control" name="uname" placeholder="your name (optional)" >
-                            </div>
-                            <div class="form-group">
-                                <textarea  class="form-control" name="body" placeholder="what do you think about the service ..." rows="3"></textarea>
-                            </div>
-
-                            <button type="button" class="btn btn-primary feedBackSubmit"> 
-                                <span style="padding-left: 3em; padding-right: 3em;"> Submit</span> 
-                            </button>
-                            <a href="#" class="btn btn-danger wishesFeedback"> cancel </a>
-                        </form>
-
-                    </div>
-                    <!-- end of feedback-->
-
-                    <!--printing here-->
-                    <div class="col-lg-8 col-lg-offset-2 newPrintHere" 
-                         style="    margin-bottom: 15px; color: rgb(212, 225, 236); display: none; ">
-
-
-                        <!--, Select YES if you want to order a hard copy-->
-                        <form class="printForm" role="form" style="margin-top: 15px">
-                            <span class="el"></span>
-                            <span class="you">  You will receive a printable card in email</span>
-                            <div class="form-group you">
-                                <div class="input-group">
-                                    <input type="email"  class="form-control" name="email" placeholder="enter your email ..." required="required">
-                                    <div class="input-group-btn">
-                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                            hard copy ? <span class="caret"></span></button>
-                                        <ul class="dropdown-menu dropdown-menu-right hcopy" role="menu" >
-                                            <li><a href="#">YES</a></li>
-                                            <li><a href="#">NO</a></li>
-                                        </ul>
-                                    </div><!-- /btn-group -->
-                                </div>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary printSubmit you"> 
-                                <span style="padding-left: 3em; padding-right: 3em;"> Submit</span> 
-                            </button>
-                            <a href="#" class="btn btn-danger wishesPrint"> cancel </a>
-
-                        </form>
-
-                    </div>
-                    <!--end of printing here-->
-
 
                 </div>
             </div>
@@ -276,7 +226,7 @@
 
                  style="
                  background-color: rgba(80, 80, 80, 0.5);
-                 height: 700px;
+                 height: 500px;
                  "
                  >
                 <div class="row about" style="color: black;">
@@ -337,9 +287,76 @@
         </div>
 
 
-        <!--prompting user for pin-->
+        <!--menu elements-->
+        <!--, Select YES if you want to order a hard copy-->
+        <script type="text/template" id="print_view_template">
+            <% if(nologgin){ %>
+            <a href="#" class="btn btn-danger close_btn"> only for logged in users </a>
+            <%} else {%>
+            <form class="printForm" role="form" style="margin-top: 15px">
+            <span class="el"></span>
+            <span class="you">  You will receive a printable card in email</span>
+            <div class="form-group you">
+            <div class="input-group">
+            <input type="email"  class="form-control" name="email" placeholder="enter your email ..." required="required">
+            <div class="input-group-btn">
+            <button type="button" class="btn btn-default dropdown-toggle for_hcopy" data-toggle="dropdown">
+            hard copy ? <span class="caret"></span></button>
+            <ul class="dropdown-menu dropdown-menu-right hcopy" role="menu" >
+            <li><a href="#">YES</a></li>
+            <li><a href="#">NO</a></li>
+            </ul>
+            </div><!-- /btn-group -->
+            </div>
+            </div>
 
+            <button type="submit" class="btn btn-primary "> 
+            <span style="padding-left: 3em; padding-right: 3em;"> Submit</span> 
+            </button>
+            <a href="#" class="btn btn-danger close_btn"> cancel </a>
 
+            </form>
+            <% } %>
+        </script>
+
+        <script type="text/template" id="feedb_view_template">
+            <% if(nologgin){ %>
+            <a href="#" class="btn btn-danger close_btn"> only for logged in users </a>
+            <%} else {%>
+            <form class="feedBackForm" role="form" style="margin-top: 15px">
+            <div class="form-group">
+            <input type="text"  class="form-control" name="uname" placeholder="your name (optional)" >
+            </div>
+            <div class="form-group">
+            <textarea  class="form-control" name="body" placeholder="what do you think about the service ..." rows="3"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary"> 
+            <span style="padding-left: 3em; padding-right: 3em;"> Submit</span> 
+            </button>
+            <a href="#" class="btn btn-danger close_btn"> cancel </a>
+            </form>
+            <% } %>
+        </script>
+
+        <script type="text/template" id="goal_view_template">
+            <% if(nologgin){ %>
+            <a href="#" class="btn btn-danger close_btn"> only for logged in users </a>
+            <%} else {%>
+            <form class="goalForm" role="form" style="margin-top: 15px">
+            <span class="el"></span>
+            <div class="form-group you" >
+            <textarea  class="form-control" name="body" placeholder="Goal for a new era ..." rows="3"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+            <span style="padding-left: 3em; padding-right: 3em;">Save</span>
+
+            </button>
+            <a href="#" class="btn btn-danger close_btn">cancel</a>
+            </form>
+            <% } %>
+        </script>
 
 
         <!--prompting user for a pin-->
@@ -362,7 +379,7 @@
 
         </script>
 
-
+        <!--bt/img/bwishesy.png-->
         <script type="text/template" id="talk_view_template">
             <div class="circleImg" style="position: absolute;
             top: 1em;
@@ -378,7 +395,7 @@
             box-shadow:         inset 0 0 10px #000000;
             overflow: hidden;
             ">
-            <img src="bt/img/bwishesy.png" alt="Logo" style="width: 100px; height: 100px" >
+            <img src="<%= imageURL %>" alt="Logo" style="width: 100px; height: 100px" >
             </div>
             <h2 class="showWishBody" title="click to expand"><%= title %></h2>
             <div class="talkBody">
@@ -395,183 +412,18 @@
         <!-- Include all compiled plugins (below), or include individual files as needed -->
 
         <script src="bt/js/libs/underscore-min.js"></script>
-        <script src="bt/js/libs/backbone-min.js"></script>
-        <script src="bt/js/libs/backbone.localStorage.js"></script>
 
         <script src="//www.parsecdn.com/js/parse-1.2.18.min.js"></script>
 
+        <script src="bt/js/libs/backbone-min.js"></script>
+        <script src="bt/js/libs/backbone.localStorage.js"></script>
 
         <script  src="bt/js/libs/bootstrap.min.js"></script>
-
         <script src="bt/js/libs/jquery-ui.js"></script>
-
         <script src="bt/js/BirthdayWishes.js"></script>
 
 
         <script type="text/javascript">
-
-
-            (function($) {
-            var wd = $(document).width();
-            var ht = $(document).height();
-
-            $(".theImage").css({
-            width: wd,
-            height: ht
-            });
-
-            $(window).resize(function() {
-
-            wd = $(document).width();
-            ht = $(document).height();
-
-            $(".theImage").css({
-            width: wd,
-            height: ht
-            });
-
-
-            });
-
-            $(".loginArea").draggable();
-            //$(".aWish").draggable();  ///--only in printing mode
-            //$( ".about" ).draggable();
-
-            /*   $(".aWish").hover(function() {
-
-
-            if(!SEARCH_MODE){
-            $(".aWish").css({
-            opacity: 0.1
-            });
-
-            $(this).css({
-            opacity: 0.99
-            });
-
-            }
-            }); */
-
-
-            $(".newWishClose").click(function() {
-            checkLogin(".goalForm");
-            $(".newFeedback").css({display: "none"});
-            $(".newPrintHere").css({display: "none"});
-
-
-            $(".newWish").animate({
-            height: "toggle"
-            }, 1000);
-
-            });
-
-            $(".loginOpen").click(function() {
-
-            $(".loginArea").animate({
-            height: "toggle"
-            }, 1000);
-
-            });
-
-            $(".wishesAbout").click(function() {
-
-            $(".about").animate({
-            height: "toggle"
-            }, 1000);
-
-            });
-
-            $(".wishesFeedback").click(function() {
-
-
-
-            $(".newWish").css({display: "none"});
-            $(".newPrintHere").css({display: "none"});
-            $(".newFeedback").animate({
-            height: "toggle"
-            }, 1000);
-
-            });
-
-            $(".wishesPrint").click(function() {
-
-            checkLogin(".printForm");
-
-
-            $(".newWish").css({display: "none"});
-            $(".newFeedback").css({display: "none"});
-
-            $(".newPrintHere").animate({
-            height: "toggle"
-            }, 1000);
-
-            });
-
-
-
-
-            //===for search
-            $(document).click(function(e){
-            var check = $(e.target).attr("class"); 
-            console.log("check == ",check);
-            if(!check)
-
-            {}else{
-            if($(e.target).attr("class").search("asearch") < 0){
-            $(".asearch").css({"background-color": "rgba(255, 255, 255, 0)"});
-            $(".asearch").val("");
-            SEARCH_MODE = false;
-            }
-
-
-            }
-            });
-
-
-            $(".asearch").click(function(e){
-            $(e.target).css({"background-color": "rgba(255, 255, 255, 1)"});
-            SEARCH_MODE = true;
-            });
-
-            // positioning the imageHolder
-
-            var all = $(".about");
-
-            $.each(all, function(i, el) {
-            var H = $(el).outerHeight();
-
-            var img = $(el).children(".circleImg");
-
-            var h = $(img).outerHeight();
-
-            var pos = (H / 2) - (h / 2);
-
-            $(img).css({top: pos + "px"});
-            });
-
-
-
-
-            //check login here
-            function checkLogin(target){
-            var thisUser = Parse.User.current();// logged in user
-
-            if(!thisUser){
-            //we present a login button
-
-            $(target).children(".you").css({display: "none"});
-            $(target).children(".el").html("only logged in users");
-
-            }else{
-            $(target).children(".you").css({display: "inline"});
-            $(target).children(".el").html(""); 
-            }
-            }
-
-
-
-
-            })(jQuery);
 
 
         </script>
